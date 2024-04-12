@@ -192,6 +192,10 @@ def main(cfg: DictConfig) -> Tuple[List[Trainer], pd.DataFrame]:
     device_eval_batch_size: int = pop_config(cfg,
                                              'device_eval_batch_size',
                                              must_exist=True)
+    results_output_path: Optional[str] = pop_config(cfg,
+                                                   'output_path',
+                                                   must_exist=False,
+                                                   default_value=None)
     precision: str = pop_config(cfg,
                                 'precision',
                                 must_exist=False,
@@ -237,7 +241,8 @@ def main(cfg: DictConfig) -> Tuple[List[Trainer], pd.DataFrame]:
                                          default_value=True)
 
     # Pop out interpolation variables.
-    pop_config(cfg, 'model_name_or_path', must_exist=False, default_value=None)
+    pop_config(cfg, 'model_name', must_exist=False, default_value=None)
+    pop_config(cfg, 'model_path', must_exist=False, default_value=None)
 
     # Warn for unused parameters
     for key in cfg:
@@ -340,9 +345,18 @@ def main(cfg: DictConfig) -> Tuple[List[Trainer], pd.DataFrame]:
         assert models_df is not None
         print(models_df.to_markdown(index=False))
 
+        if results_output_path:
+            print(f'Saving complete results for all models')
+            try:
+                os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
+                models_df.to_csv(results_output_path, index=False)
+                print(f"CSV file saved to: {results_output_path}")
+            except PermissionError as e:
+                print(f"[Unable to create output directory] {e}")
+
         trainer.close()
 
-    return trainers, eval_gauntlet_df
+    return trainers, models_df, eval_gauntlet_df
 
 
 def calculate_markdown_results(logger_keys: List[str], trainer: Trainer,
@@ -390,37 +404,37 @@ def calculate_markdown_results(logger_keys: List[str], trainer: Trainer,
                         'Category': benchmark_to_taxonomy.get(benchmark, ''),
                         'Benchmark': benchmark,
                         'Subtask': None,
-                        'Accuracy': subscores[0]['val'],
+                        'Accuracy': subscores[0]['val'].item(),
                         'Number few shot': num_shot,
                         'Model': model_name
                     }
                     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
                 else:
-                    row = {
-                        'Category':
-                            benchmark_to_taxonomy.get(benchmark, ''),
-                        'Benchmark':
-                            benchmark,
-                        'Subtask':
-                            'Average',
-                        'Accuracy':
-                            sum(s['val'] for s in subscores) / len(subscores),
-                        'Number few shot':
-                            num_shot,
-                        'Model':
-                            model_name
-                    }
-                    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+                    # row = {
+                    #     'Category':
+                    #         benchmark_to_taxonomy.get(benchmark, ''),
+                    #     'Benchmark':
+                    #         benchmark,
+                    #     'Subtask':
+                    #         'Average',
+                    #     'Accuracy':
+                    #         sum(s['val'].item() for s in subscores) / len(subscores),
+                    #     'Number few shot':
+                    #         num_shot,
+                    #     'Model':
+                    #         model_name
+                    # }
+                    # df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
                     for sub in subscores:
                         row = {
                             'Category':
                                 benchmark_to_taxonomy.get(benchmark, ''),
                             'Benchmark':
-                                None,
+                                benchmark,
                             'Subtask':
                                 sub['subcat'],
                             'Accuracy':
-                                sub['val'],
+                                sub['val'].item(),
                             'Number few shot':
                                 num_shot,
                             'Model':
