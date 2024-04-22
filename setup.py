@@ -6,6 +6,7 @@
 import copy
 import os
 import re
+import warnings
 
 import setuptools
 from setuptools import setup
@@ -51,10 +52,10 @@ classifiers = [
 ]
 
 install_requires = [
-    'mosaicml[libcloud,wandb,oci,gcs]>=0.21.1,<0.22',
+    # 'mosaicml[libcloud,wandb,oci,gcs]>=0.21.1,<0.22',
     'mlflow>=2.10,<3',
     'accelerate>=0.25,<0.26',  # for HF inference `device_map`
-    'transformers>=4.38.2,<4.39',
+    'transformers>=4.39.0',
     'mosaicml-streaming>=0.7.4,<0.8',
     'torch>=2.2.1,<2.3',
     'datasets>=2.16,<2.17',
@@ -72,6 +73,7 @@ install_requires = [
     'tenacity>=8.2.3,<9',
     'catalogue>=2,<3',
     'typer[all]<1',
+    'loguru'
 ]
 
 extra_deps = {}
@@ -147,3 +149,6 @@ setup(
         'console_scripts': ['llmfoundry = llmfoundry.cli.cli:app'],
     },
 )
+
+warnings.warn("The required package 'composer' has been removed in this fork."
+              "Please install it separately.", UserWarning)
