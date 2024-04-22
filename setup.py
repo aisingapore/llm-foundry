@@ -168,3 +168,6 @@ setup(
         'console_scripts': ['llmfoundry = llmfoundry.cli.cli:app'],
     },
 )
+
+warnings.warn("The required package 'composer' has been removed in this fork."
+              "Please install it separately.", UserWarning)
