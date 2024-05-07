@@ -1,19 +1,11 @@
-# Copyright 2022 MosaicML LLM Foundry authors
-# SPDX-License-Identifier: Apache-2.0
+FROM mosaicml/llm-foundry:2.2.1_cu121_flash2-f044d6c
 
-ARG BASE_IMAGE
-FROM $BASE_IMAGE
+RUN mkdir /workspace
+WORKDIR /workspace
+RUN git clone -b feat-docker https://github.com/aisingapore/llm-foundry.git llm_foundry
+WORKDIR /workspace/llm_foundry
+RUN pip install -e '.[gpu]'
 
-ARG BRANCH_NAME
-ARG DEP_GROUPS
+WORKDIR /workspace/llm_foundry/scripts
 
-# Check for changes in setup.py.
-# If there are changes, the docker cache is invalidated and a fresh pip installation is triggered.
-ADD https://raw.githubusercontent.com/mosaicml/llm-foundry/$BRANCH_NAME/setup.py setup.py
-RUN rm setup.py
-
-# Install and uninstall foundry to cache foundry requirements
-RUN git clone -b $BRANCH_NAME https://github.com/mosaicml/llm-foundry.git
-RUN pip install --no-cache-dir "./llm-foundry${DEP_GROUPS}"
-RUN pip uninstall -y llm-foundry
-RUN rm -rf llm-foundry
+ENTRYPOINT ["/workspace/llm_foundry/entrypoint.sh"]
