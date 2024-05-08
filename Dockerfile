@@ -6,6 +6,4 @@ RUN git clone -b feat-docker https://github.com/aisingapore/llm-foundry.git llm_
 WORKDIR /workspace/llm_foundry
 RUN pip install -e '.[gpu]'
 
-WORKDIR /workspace/llm_foundry/scripts
-
-ENTRYPOINT ["/workspace/llm_foundry/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/workspace/llm_foundry/entrypoint.sh"]
