@@ -17,6 +17,7 @@ from llmfoundry.callbacks.resumption_callbacks import (GlobalLRScaling,
                                                        LayerFreezing)
 from llmfoundry.callbacks.wandb_loss_monitor import WAndBLossMonitor
 from llmfoundry.callbacks.scheduled_gc_callback import ScheduledGarbageCollector
+from llmfoundry.callbacks.schedule_free import ScheduleFreeCallback
 from llmfoundry.registry import callbacks, callbacks_with_config
 
 callbacks.register('lr_monitor', func=LRMonitor)
@@ -35,6 +36,7 @@ callbacks.register('mono_checkpoint_saver', func=MonolithicCheckpointSaver)
 callbacks.register('scheduled_gc', func=ScheduledGarbageCollector)
 callbacks.register('oom_observer', func=OOMObserver)
 callbacks.register('wandb_loss_monitor', func=WAndBLossMonitor)
+callbacks.register('schedule_free', func=ScheduleFreeCallback)
 
 callbacks_with_config.register('async_eval', func=AsyncEval)
 callbacks_with_config.register('curriculum_learning', func=CurriculumLearning)
@@ -49,5 +51,6 @@ __all__ = [
     'HuggingFaceCheckpointer',
     'AsyncEval',
     'CurriculumLearning',
+    'ScheduleFreeCallback'
     'WAndBLossMonitor'
 ]
