@@ -39,6 +39,7 @@ from llmfoundry.callbacks.resumption_callbacks import (
 )
 from llmfoundry.callbacks.run_timeout_callback import RunTimeoutCallback
 from llmfoundry.callbacks.scheduled_gc_callback import ScheduledGarbageCollector
+from llmfoundry.callbacks.schedule_free import ScheduleFreeCallback
 from llmfoundry.registry import callbacks, callbacks_with_config
 
 callbacks.register('system_metrics_monitor', func=SystemMetricsMonitor)

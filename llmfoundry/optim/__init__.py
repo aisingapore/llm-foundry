@@ -12,6 +12,7 @@ from llmfoundry.optim.adaptive_lion import DecoupledAdaLRLion, DecoupledClipLion
 from llmfoundry.optim.lion import DecoupledLionW
 from llmfoundry.optim.no_op import NoOp
 from llmfoundry.optim.scheduler import InverseSquareRootWithWarmupScheduler
+from llmfoundry.optim.adamw_schedulefree import AdamWScheduleFree, ScheduleFree
 from llmfoundry.registry import optimizers, schedulers
 
 optimizers.register('adalr_lion', func=DecoupledAdaLRLion)
@@ -32,6 +33,7 @@ schedulers.register(
 )
 
 __all__ = [
+    'ScheduleFree',
     'DecoupledLionW',
     'DecoupledClipLion',
     'DecoupledAdaLRLion',
