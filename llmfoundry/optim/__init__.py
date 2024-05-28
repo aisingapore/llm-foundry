@@ -7,6 +7,7 @@ from composer.optim import (ConstantWithWarmupScheduler,
 
 from llmfoundry.optim.adaptive_lion import DecoupledAdaLRLion, DecoupledClipLion
 from llmfoundry.optim.lion import DecoupledLionW
+from llmfoundry.optim.wsd_scheduler import WSDScheduler
 from llmfoundry.optim.scheduler import InverseSquareRootWithWarmupScheduler
 from llmfoundry.optim.adamw_schedulefree import AdamWScheduleFree, ScheduleFree
 from llmfoundry.registry import optimizers, schedulers
@@ -23,6 +24,7 @@ schedulers.register('cosine_with_warmup',
 schedulers.register('linear_decay_with_warmup', func=LinearWithWarmupScheduler)
 schedulers.register('inv_sqrt_with_warmup',
                     func=InverseSquareRootWithWarmupScheduler)
+schedulers.register('wsd_scheduler', func=WSDScheduler)
 
 __all__ = [
     'ScheduleFree',
