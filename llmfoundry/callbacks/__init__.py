@@ -51,6 +51,6 @@ __all__ = [
     'HuggingFaceCheckpointer',
     'AsyncEval',
     'CurriculumLearning',
-    'ScheduleFreeCallback'
+    'ScheduleFreeCallback',
     'WAndBLossMonitor'
 ]
