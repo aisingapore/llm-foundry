@@ -23,6 +23,9 @@ from omegaconf import OmegaConf as om
 from torch.optim.optimizer import Optimizer
 from torchmetrics import Metric
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
+# import sentencepiece as spm
+# from sentencepiece import SentencePieceProcessor
+from llmfoundry.utils.tokenization_SEA_BPE import SEABPETokenizer
 
 from llmfoundry import registry
 from llmfoundry.callbacks import EvalGauntlet
@@ -426,12 +429,14 @@ def build_tokenizer(
     if tokenizer_name.startswith('tiktoken'):
         tokenizer = TiktokenTokenizerWrapper(**tokenizer_kwargs)
     else:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
-                                                  **tokenizer_kwargs)
+        # tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
+        #                                           **tokenizer_kwargs)
+        tokenizer = SEABPETokenizer(tokenizer_name, legacy=False, **tokenizer_kwargs)
 
         # HuggingFace does not respect the model_max_length kwarg, and overrides it with
         # min(kwargs['model_max_length'], original_config['model_max_length']), so we
         # explicitly set it here
+        
         tokenizer.model_max_length = tokenizer_kwargs.get(
             'model_max_length',
             int(1e30),

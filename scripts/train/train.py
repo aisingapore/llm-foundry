@@ -35,6 +35,7 @@ from llmfoundry.utils.config_utils import (log_config, pop_config,
                                            process_init_device,
                                            update_batch_size_info)
 from llmfoundry.utils.registry_utils import import_file
+import wandb
 
 log = logging.getLogger(__name__)
 
@@ -590,6 +591,7 @@ def main(cfg: DictConfig) -> Trainer:
     if eval_first and trainer.state.timestamp.batch.value == 0:
         trainer.eval()
 
+    # wandb.config.update(logged_cfg)
     log.info('Starting training...')
     trainer.fit()
 
