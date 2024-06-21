@@ -429,9 +429,9 @@ def build_tokenizer(
     if tokenizer_name.startswith('tiktoken'):
         tokenizer = TiktokenTokenizerWrapper(**tokenizer_kwargs)
     else:
-        # tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
-        #                                           **tokenizer_kwargs)
-        tokenizer = SEABPETokenizer(tokenizer_name, legacy=False, **tokenizer_kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
+                                                  **tokenizer_kwargs)
+        # tokenizer = SEABPETokenizer(tokenizer_name, legacy=False, **tokenizer_kwargs)
 
         # HuggingFace does not respect the model_max_length kwarg, and overrides it with
         # min(kwargs['model_max_length'], original_config['model_max_length']), so we
