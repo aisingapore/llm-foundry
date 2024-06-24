@@ -36,7 +36,8 @@ class HuggingFaceModelWithFSDP(HuggingFaceModel):
                  eval_metrics: Optional[List[Metric]] = None,
                  shift_labels: bool = False,
                  init_device: Optional[str] = None,
-                 peft_config: Optional['PeftConfig'] = None):
+                 peft_config: Optional['PeftConfig'] = None,
+                 allow_embedding_resizing: bool = False):
         super().__init__(
             model,
             tokenizer,
@@ -46,6 +47,7 @@ class HuggingFaceModelWithFSDP(HuggingFaceModel):
             shift_labels=shift_labels,
             peft_config=peft_config,
             should_save_peft_only=True,
+            allow_embedding_resizing = allow_embedding_resizing
         )
 
         # Note: We need to add the FSDP related attributes to the model AFTER the super init,
