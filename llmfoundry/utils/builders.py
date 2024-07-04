@@ -30,6 +30,8 @@ from llmfoundry.data.dataloader import build_dataloader
 from llmfoundry.tokenizers.tiktoken import TiktokenTokenizerWrapper
 from llmfoundry.utils.registry_utils import construct_from_registry
 
+from my_modules.tokenizer import SEABPETokenizer
+
 log = logging.getLogger(__name__)
 
 __all__ = [
@@ -414,6 +416,8 @@ def build_tokenizer(
         tokenizer_kwargs: Dict[str, Any]) -> PreTrainedTokenizerBase:
     os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = '1'
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+    print(f"{tokenizer_name=}")
+    print(f"{tokenizer_kwargs=}")
 
     signal_file_path = f'.node_{dist.get_node_rank()}_local_rank0_completed_tokenizer_setup'
 
@@ -425,6 +429,11 @@ def build_tokenizer(
 
     if tokenizer_name.startswith('tiktoken'):
         tokenizer = TiktokenTokenizerWrapper(**tokenizer_kwargs)
+    elif tokenizer_name == 'SEABPETokenizer':
+        tokenizer = SEABPETokenizer(
+            vocab_file=tokenizer_kwargs.get('vocab_file', None),
+            eos_token='<|endoftext|>',
+            add_eos_token=True)
     else:
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
                                                   **tokenizer_kwargs)

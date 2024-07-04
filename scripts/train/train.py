@@ -163,6 +163,7 @@ def main(cfg: DictConfig) -> Trainer:
                                                   'tokenizer',
                                                   must_exist=True,
                                                   convert=True)
+    print(f"{tokenizer_config=}")
     optimizer_config: Dict[str, Any] = pop_config(cfg,
                                                   'optimizer',
                                                   must_exist=True,
