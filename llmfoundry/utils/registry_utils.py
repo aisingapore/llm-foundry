@@ -1,19 +1,38 @@
 # Copyright 2024 MosaicML LLM Foundry authors
 # SPDX-License-Identifier: Apache-2.0
 
+import copy
 import functools
 import importlib.util
 import os
+from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
-from typing import (Any, Callable, Dict, Generic, Optional, Sequence, Type,
-                    TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import catalogue
 
-__all__ = ['TypedRegistry', 'create_registry', 'construct_from_registry']
+__all__ = [
+    'TypedRegistry',
+    'create_registry',
+    'construct_from_registry',
+    'import_file',
+    'save_registry',
+]
 
 T = TypeVar('T')
+TypeBoundT = TypeVar('TypeBoundT', bound=Type)
+CallableBoundT = TypeVar('CallableBoundT', bound=Callable[..., Any])
 
 
 class TypedRegistry(catalogue.Registry, Generic[T]):
@@ -22,10 +41,12 @@ class TypedRegistry(catalogue.Registry, Generic[T]):
     descriptions.
     """
 
-    def __init__(self,
-                 namespace: Sequence[str],
-                 entry_points: bool = False,
-                 description: str = '') -> None:
+    def __init__(
+        self,
+        namespace: Sequence[str],
+        entry_points: bool = False,
+        description: str = '',
+    ) -> None:
         super().__init__(namespace, entry_points=entry_points)
 
         self.description = description
@@ -34,6 +55,14 @@ class TypedRegistry(catalogue.Registry, Generic[T]):
         return super().__call__(name, func)
 
     def register(self, name: str, *, func: Optional[T] = None) -> T:
+        return super().register(name, func=func)
+
+    def register_class(
+        self,
+        name: str,
+        *,
+        func: Optional[TypeBoundT] = None,
+    ) -> TypeBoundT:
         return super().register(name, func=func)
 
     def get(self, name: str) -> T:
@@ -72,9 +101,11 @@ def create_registry(
     if catalogue.check_exists(*namespace):
         raise catalogue.RegistryError(f'Namespace already exists: {namespace}')
 
-    return TypedRegistry[generic_type](namespace,
-                                       entry_points=entry_points,
-                                       description=description)
+    return TypedRegistry[generic_type](
+        namespace,
+        entry_points=entry_points,
+        description=description,
+    )
 
 
 def construct_from_registry(
@@ -96,6 +127,7 @@ def construct_from_registry(
             before constructing the item to return. This should throw an exception if validation fails. Defaults to None.
         post_validation_function (Optional[Callable[[Any], None]], optional): An optional validation function called after
             constructing the item to return. This should throw an exception if validation fails. Defaults to None.
+        kwargs (Optional[Dict[str, Any]]): Other relevant keyword arguments.
 
     Raises:
         ValueError: If the validation functions failed or the registered item is invalid
@@ -112,30 +144,31 @@ def construct_from_registry(
         if isinstance(pre_validation_function, type):
             if not issubclass(registered_constructor, pre_validation_function):
                 raise ValueError(
-                    f'Expected {name} to be of type {pre_validation_function}, but got {type(registered_constructor)}'
+                    f'Expected {name} to be of type {pre_validation_function}, but got {type(registered_constructor)}',
                 )
         elif isinstance(pre_validation_function, Callable):
             pre_validation_function(registered_constructor)
         else:
             raise ValueError(
-                f'Expected pre_validation_function to be a callable or a type, but got {type(pre_validation_function)}'
+                f'Expected pre_validation_function to be a callable or a type, but got {type(pre_validation_function)}',
             )
 
     # If it is a class, or a builder function, construct the class with kwargs
     # If it is a function, create a partial with kwargs
     if isinstance(
-            registered_constructor,
-            type) or callable(registered_constructor) and not partial_function:
+        registered_constructor,
+        type,
+    ) or callable(registered_constructor) and not partial_function:
         constructed_item = registered_constructor(**kwargs)
     elif callable(registered_constructor):
         constructed_item = functools.partial(registered_constructor, **kwargs)
     else:
         raise ValueError(
-            f'Expected {name} to be a class or function, but got {type(registered_constructor)}'
+            f'Expected {name} to be a class or function, but got {type(registered_constructor)}',
         )
 
     if post_validation_function is not None:
-        post_validation_function(registered_constructor)
+        post_validation_function(constructed_item)
 
     return constructed_item
 
@@ -144,6 +177,7 @@ def import_file(loc: Union[str, Path]) -> ModuleType:
     """Import module from a file.
 
     Used to run arbitrary python code.
+
     Args:
         name (str): Name of module to load.
         loc (str / Path): Path to the file.
@@ -166,3 +200,13 @@ def import_file(loc: Union[str, Path]) -> ModuleType:
     except Exception as e:
         raise RuntimeError(f'Error executing {loc}') from e
     return module
+
+
+@contextmanager
+def save_registry():
+    """Save the registry state and restore after the context manager exits."""
+    saved_registry_state = copy.deepcopy(catalogue.REGISTRY)
+
+    yield
+
+    catalogue.REGISTRY = saved_registry_state
