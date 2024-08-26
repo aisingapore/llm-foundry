@@ -3,16 +3,24 @@
 
 """Dataloader builder utilities."""
 
+from typing import Any, Dict, Union
+
 from composer import DataSpec
-from omegaconf import DictConfig
 from transformers import PreTrainedTokenizerBase
 
 from llmfoundry import registry
 from llmfoundry.utils.registry_utils import construct_from_registry
 
+__all__ = [
+    'build_dataloader',
+]
 
-def build_dataloader(cfg: DictConfig, tokenizer: PreTrainedTokenizerBase,
-                     device_batch_size: int) -> DataSpec:
+
+def build_dataloader(
+    cfg: Dict[str, Any],
+    tokenizer: PreTrainedTokenizerBase,
+    device_batch_size: Union[int, float],
+) -> DataSpec:
     """Builds a dataloader from a config.
 
     Args:
@@ -21,14 +29,15 @@ def build_dataloader(cfg: DictConfig, tokenizer: PreTrainedTokenizerBase,
         device_batch_size (int): The size of the batches (number of examples)
             that the dataloader will produce.
     """
-    kwargs = {
-        'cfg': cfg,
+    name = cfg.pop('name')
+    kwargs: Dict[str, Any] = {
+        **cfg,
         'tokenizer': tokenizer,
-        'device_batch_size': device_batch_size
+        'device_batch_size': device_batch_size,
     }
 
     return construct_from_registry(
-        name=cfg.name,
+        name=name,
         registry=registry.dataloaders,
         partial_function=False,
         pre_validation_function=None,
