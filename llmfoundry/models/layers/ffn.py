@@ -6,7 +6,7 @@
 import logging
 from copy import deepcopy
 from functools import partial
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
 import torch
 import torch.nn as nn

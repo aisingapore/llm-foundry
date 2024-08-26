@@ -74,6 +74,8 @@ class BinPackCollator:
 
         self._is_profiling = is_profiling
 
+        self._is_profiling = is_profiling
+
     @property
     def waste(self) -> float:
         return 1 - (self.n_packed_tokens / self.n_total_tokens)

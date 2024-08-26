@@ -682,6 +682,207 @@ class MPTModel(MPTPreTrainedModel):
             self.mb_args = block_args['ffn_config'].get('args')
         return block_args
 
+    @property
+    def block_class(self) -> Type[MPTBlock]:
+        return MPTBlock
+
+    def construct_blocks(self, config: MPTConfig) -> nn.ModuleList:
+        """Construct the nn.ModuleList with the Transformer blocks.
+
+        Args:
+            config (MPTConfig): The configuration object.
+
+        Returns:
+            nn.ModuleList: The list of Transformer blocks.
+        """
+        block_args = self.extract_block_args(config.to_dict())
+        self.kv_cache_layers = set()
+        self.blocks_fuse_norm_attn_norm = block_args.get(
+            'fuse_norm_attn_norm',
+            False,
+        )
+
+        if config.block_overrides is not None:
+            block_args_list = self._get_override_block_args_list(
+                config,
+                block_args,
+            )
+        else:
+            block_args_list = [block_args for _ in range(config.n_layers)]
+
+        return nn.ModuleList([
+            self.block_class(
+                device=config.init_device,
+                **block_args_i,
+            ) for block_args_i in block_args_list
+        ])
+
+    def _get_override_block_args_list(
+        self,
+        config: MPTConfig,
+        block_args: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        if config.block_overrides is None:
+            raise ValueError(
+                'config.block_overrides should not be None when calling _get_override_block_args_list.',
+            )
+        repeat = config.block_overrides.get('repeat', 1)
+        model_modules_order_expanded = MPTModel._get_modules_order_expanded(
+            config.block_overrides['order'],
+        ) * repeat
+        if len(model_modules_order_expanded) != config.n_layers:
+            raise ValueError(
+                f'The specified block overrides do not match the number of layers: {len(model_modules_order_expanded)} vs {config.n_layers}.',
+            )
+
+        new_block_args_list = []
+        layer_description_list = []
+
+        reuse_kv_layer_idx_dict = {}
+        for b_idx in range(config.n_layers):
+            module_name = model_modules_order_expanded[b_idx]
+            override_config = {}
+            if module_name != 'default':
+                override_config = copy.deepcopy(
+                    config.block_overrides['overrides'][module_name],
+                )
+                if 'reuse_kv_layer_idx' in override_config.get(
+                    'attn_config',
+                    {},
+                ):
+                    reuse_kv_layer_idx = MPTModel._resolve_reuse_kv_layer_idx(
+                        overrides_definition=config.
+                        block_overrides['overrides'],
+                        model_modules_order_expanded=
+                        model_modules_order_expanded,
+                        b_idx=b_idx,
+                        override_config=override_config,
+                        reuse_kv_layer_idx_dict=reuse_kv_layer_idx_dict,
+                    )
+                    override_config['attn_config']['reuse_kv_layer_idx'
+                                                  ] = reuse_kv_layer_idx
+                    self.kv_cache_layers.add(reuse_kv_layer_idx)
+            layer_description_list.append([
+                b_idx,
+                module_name,
+                override_config,
+            ],)
+            new_block_args_list.append(
+                MPTModel._override_block_args(
+                    block_args,
+                    override_config,
+                    config.allowed_block_overrides,
+                ),
+            )
+        log.info(
+            'The following is a summary of overrides per layer.\n' + tabulate(
+                layer_description_list,
+                headers=['idx', 'name', 'overrides'],
+            ),
+        )
+        return new_block_args_list
+
+    @staticmethod
+    def _resolve_reuse_kv_layer_idx(
+        overrides_definition: Dict[str, Any],
+        model_modules_order_expanded: List[str],
+        b_idx: int,
+        override_config: Dict[str, Any],
+        reuse_kv_layer_idx_dict: Dict[int, int],
+    ) -> int:
+        override_attn_config = override_config['attn_config']
+        if override_attn_config['reuse_kv_layer_idx'] >= 0:
+            raise ValueError(
+                f'The relative index of kv layer to reuse, {override_attn_config["reuse_kv_layer_idx"]=}, should be negative.',
+            )
+        reuse_kv_layer_idx = b_idx + override_attn_config['reuse_kv_layer_idx']
+        if reuse_kv_layer_idx < 0:
+            raise ValueError(
+                f'The absolute index of kv layer to reuse, {reuse_kv_layer_idx} should be non-negative.',
+            )
+        if reuse_kv_layer_idx in reuse_kv_layer_idx_dict:
+            reuse_kv_layer_idx = reuse_kv_layer_idx_dict[reuse_kv_layer_idx]
+        reuse_kv_layer_idx_dict[b_idx] = reuse_kv_layer_idx
+
+        parent_layer_name = model_modules_order_expanded[reuse_kv_layer_idx]
+        parent_config = {} if parent_layer_name == 'default' else copy.deepcopy(
+            overrides_definition[parent_layer_name],
+        )
+        if 'attn_config' not in parent_config:
+            parent_config['attn_config'] = {}
+        parent_config['attn_config']['reuse_kv_layer_idx'] = override_config[
+            'attn_config']['reuse_kv_layer_idx']
+
+        if override_config != parent_config and not (
+            'allow_mismatch' in override_config and
+            override_config['allow_mismatch']
+        ):
+            raise ValueError(
+                'For reusing the kv cache of a previous layer, the previous layer should match the block config as the current layer.',
+            )
+
+        return reuse_kv_layer_idx
+
+    @staticmethod
+    def _get_modules_order_expanded(order: List[Dict[str, Any]]) -> List[str]:
+        model_modules_order_expanded = []
+        for item in order:
+            repeat = item['repeat'] if 'repeat' in item else 1
+            if ('name' in item) == ('order' in item):
+                raise ValueError(
+                    'Exactly one of `order` or `name` must be specified for each block override.',
+                )
+
+            if 'name' in item:
+                model_modules_order_expanded.extend([item['name']] * repeat)
+            else:
+                model_modules_order_expanded.extend(
+                    MPTModel._get_modules_order_expanded(item['order']) *
+                    repeat,
+                )
+
+        return model_modules_order_expanded
+
+    @staticmethod
+    def _override_block_args(
+        block_args: Dict[str, Any],
+        override_config: Dict[str, Any],
+        allowed_block_overrides: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        unpermitted_keys = override_config.keys(
+        ) - allowed_block_overrides.keys()
+        if len(unpermitted_keys):
+            raise KeyError(f'Overriding {unpermitted_keys} is not supported.')
+
+        new_block_args = override_config | block_args
+        common_keys = override_config.keys() & block_args.keys()
+        for k in common_keys:
+            if type(override_config[k]) != type(block_args[k]):
+                raise ValueError(
+                    f'Override config should have same value types as the original config. Found override_config[{k}]={override_config[k]} vs block_args[{k}]={block_args[k]}.',
+                )
+            if isinstance(override_config[k], dict):
+                new_block_args[k] = MPTModel._override_block_args(
+                    block_args[k],
+                    override_config[k],
+                    allowed_block_overrides[k],
+                )
+            else:
+                new_block_args[k] = override_config[k]
+        return new_block_args
+
+    def extract_block_args(self, block_args: Dict[str, Any]) -> Dict[str, Any]:
+        """Sets the block args."""
+        if block_args['ffn_config']['ffn_type'] in ffns_with_megablocks:
+            block_args['ffn_config'] = config_moe_args(
+                block_args['ffn_config'],
+                block_args['d_model'],
+                block_args['expansion_ratio'],
+                block_args['n_layers'],
+            )
+            self.mb_args = block_args['ffn_config'].get('args')
+        return block_args
+
     def get_input_embeddings(self) -> Union[SharedEmbedding, nn.Embedding]:
         return self.wte
 
@@ -1083,6 +1284,10 @@ class MPTForCausalLM(MPTPreTrainedModel):
 
     @property
     def backbone_model_class(self) -> type[MPTModel]:
+        return MPTModel
+
+    @property
+    def backbone_model_class(self) -> Type[MPTModel]:
         return MPTModel
 
     def get_input_embeddings(self) -> Union[SharedEmbedding, nn.Embedding]:

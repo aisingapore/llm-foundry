@@ -16,6 +16,8 @@ from llmfoundry.utils.consts import CROSS_ENTROPY_IGNORE_INDEX
 
 __all__ = ['InferenceAPIEvalWrapper']
 
+__all__ = ['InferenceAPIEvalWrapper']
+
 
 class InferenceAPIEvalWrapper(ComposerModel):
 

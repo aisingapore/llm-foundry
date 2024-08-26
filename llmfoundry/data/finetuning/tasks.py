@@ -646,6 +646,12 @@ class StreamingFinetuningDataset(StreamingDataset):
             )
         self.token_encoding_type = token_encoding_type
 
+        if token_encoding_type not in SUPPORTED_MDS_ENCODING_TYPES:
+            raise ValueError(
+                f'The token_encoding_type must be one of {SUPPORTED_MDS_ENCODING_TYPES}, but got {token_encoding_type}',
+            )
+        self.token_encoding_type = token_encoding_type
+
         if streams is None:
             stream_remote_local_validate(remote, local, split)
         else:
@@ -725,6 +731,16 @@ class StreamingFinetuningDataset(StreamingDataset):
 
     def state_dict(self, num_samples: int,
                    from_beginning: bool) -> dict[str, Any]:
+        if self.packing_ratio is not None:
+            num_samples = int(self.packing_ratio * num_samples)
+
+        return super().state_dict(
+            num_samples=num_samples,
+            from_beginning=from_beginning,
+        )
+
+    def state_dict(self, num_samples: int,
+                   from_beginning: bool) -> Dict[str, Any]:
         if self.packing_ratio is not None:
             num_samples = int(self.packing_ratio * num_samples)
 

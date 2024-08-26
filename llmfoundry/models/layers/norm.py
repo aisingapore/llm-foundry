@@ -131,6 +131,7 @@ class LPRMSNorm(RMSNorm):
             return rms_norm(downcast_x, downcast_weight,
                             self.eps).to(dtype=x.dtype)
 
+@norms.register_class('triton_rmsnorm')
 class TritonRMSNorm(torch.nn.Module):
 
     def __init__(

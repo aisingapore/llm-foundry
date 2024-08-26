@@ -49,6 +49,14 @@ collators.register('finetuning_collator', func=get_finetuning_collator)
 collators.register('text_collator', func=get_text_collator)
 data_specs.register('data_spec', func=get_data_spec)
 
+dataset_replication_validators.register(
+    'dataset_replication_validator',
+    func=validate_ds_replication,
+)
+collators.register('finetuning_collator', func=get_finetuning_collator)
+collators.register('text_collator', func=get_text_collator)
+data_specs.register('data_spec', func=get_data_spec)
+
 __all__ = [
     'Seq2SeqFinetuningCollator',
     'build_finetuning_dataloader',

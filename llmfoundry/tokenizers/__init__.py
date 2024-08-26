@@ -7,6 +7,8 @@ from llmfoundry.tokenizers.utils import get_date_string
 
 tokenizers.register('tiktoken', func=TiktokenTokenizerWrapper)
 
+tokenizers.register('tiktoken', func=TiktokenTokenizerWrapper)
+
 __all__ = [
     'TiktokenTokenizerWrapper',
     'get_date_string',

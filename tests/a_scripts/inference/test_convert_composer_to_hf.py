@@ -56,6 +56,14 @@ _OPTIMIZER_CFG = lambda: {
     'weight_decay': 0.0,
 }
 
+_OPTIMIZER_CFG = lambda: {
+    'name': 'decoupled_adamw',
+    'lr': 6e-4,
+    'betas': [0.9, 0.95],
+    'eps': 1e-8,
+    'weight_decay': 0.0,
+}
+
 
 def _save_model_mock(*args: Any, path: str, **kwargs: Any):
     os.makedirs(path, exist_ok=True)
