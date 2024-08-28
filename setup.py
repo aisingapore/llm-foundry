@@ -57,7 +57,7 @@ install_requires = [
     'mosaicml[libcloud,wandb,oci,gcs,mlflow]>=0.23.4,<0.24',
     'mlflow>=2.14.1,<2.16',
     'accelerate>=0.25,<0.34',  # for HF inference `device_map`
-    'transformers>=4.43.2,<4.44',
+    'transformers>=4.44.0,<4.45',
     'mosaicml-streaming>=0.8.0,<0.9',
     'torch>=2.3.0,<2.4',
     'datasets>=2.19,<2.20',
@@ -105,7 +105,7 @@ extra_deps['tensorboard'] = [
 
 # Flash 2 group kept for backwards compatibility
 extra_deps['gpu-flash2'] = [
-    'flash-attn>=2.5.8,<3',
+    'flash-attn>=2.6.0,<3',
 ]
 
 extra_deps['gpu'] = copy.deepcopy(extra_deps['gpu-flash2'])
