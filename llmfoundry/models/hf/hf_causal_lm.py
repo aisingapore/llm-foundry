@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    Mapping
 )
 
 from composer.models.huggingface import peft_installed
@@ -87,6 +88,7 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
         config_overrides: Optional[Dict[str, Any]] = None,
         peft_config: Optional[Dict[str, Any]] = None,
         use_train_metrics: bool = True,
+        allow_embedding_resizing: bool = False,
         additional_train_metrics: Optional[List] = None,
         additional_eval_metrics: Optional[List] = None,
         should_save_peft_only: bool = True,
@@ -224,7 +226,6 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
         # Resolve "mixed" init device to either "cpu" or "meta"
         resolved_init_device = hf_get_init_device(init_device)
         requested_attention_implementation = 'flash_attention_2' if use_flash_attention_2 else 'eager'
-        allow_embedding_resizing = om_model_config.get('allow_embedding_resizing', False)
         if use_flash_attention_2 and not is_flash_v2_installed():
             raise ValueError(
                 'use_flash_attention_2 is set to True, but flash-attention 2 is not installed. '
@@ -396,11 +397,10 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
                 'PEFT is not installed, but peft_config was passed. Please install LLM Foundry with the peft extra to use peft_config.',
             )
 
-    def flops_per_batch(self, batch: Mapping) -> int:
+    def flops_per_batch(self, batch:Mapping) -> int:
         # Note: this computation does not take into account padding, and assumes
         # that the dataset has been constructed without padding. Additionally, we
         # assume the backward pass is approximately 2x the forward pass
-
         bs, msl = batch['input_ids'].shape[0:2]
         params = self.n_active_params
         if not self.model.config.tie_word_embeddings:
@@ -410,5 +410,5 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
         params_flops_per_seq = params_flops_per_token * msl
         attn_flops_per_seq = (self.model.config.num_hidden_layers * 2 * 2 *
                               (self.model.config.hidden_size * (msl**2)))
-
-        return (params_flops_per_seq + attn_flops_per_seq) * 3 * bs
+        _flops_per_batch = (params_flops_per_seq + attn_flops_per_seq) * 3 * bs
+        return _flops_per_batch
