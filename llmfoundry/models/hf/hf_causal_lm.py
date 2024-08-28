@@ -8,6 +8,7 @@ from typing import (
     Any,
     Optional,
     Union,
+    Mapping
 )
 
 from transformers import (
