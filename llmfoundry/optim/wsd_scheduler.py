@@ -92,5 +92,5 @@ class WSDScheduler(ComposerScheduler):
         current_time = state.timestamp.get(t_max.unit)
         frac_of_decay = ((t_max - current_time) / (t_decay)).value
 
-        current_factor = frac_of_decay * (self.alpha_i - self.alpha_f)
+        current_factor = frac_of_decay * (self.alpha_i - self.alpha_f) + self.alpha_f
         return current_factor
