@@ -27,7 +27,7 @@ from transformers import (
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-
+import torch
 from llmfoundry.metrics import (
     DEFAULT_CAUSAL_LM_EVAL_METRICS,
     DEFAULT_CAUSAL_LM_TRAIN_METRICS,
@@ -309,6 +309,7 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
                     load_in_8bit=load_in_8bit,
                     attn_implementation=requested_attention_implementation,
                     config=config,
+                    torch_dtype = torch.bfloat16
                 )
             else:
                 model = AutoModelForCausalLM.from_config(
@@ -331,6 +332,8 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
             raise ValueError(
                 f'init_device="{init_device}" must be either "cpu" or "meta".',
             )
+
+        log.info(model)
 
         signal_file_path = f'.node_{dist.get_node_rank()}_local_rank0_completed'
         if dist.get_local_rank() == 0:
@@ -401,6 +404,7 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
         # Note: this computation does not take into account padding, and assumes
         # that the dataset has been constructed without padding. Additionally, we
         # assume the backward pass is approximately 2x the forward pass
+        log.info("Flops per batch is called")
         bs, msl = batch['input_ids'].shape[0:2]
         params = self.n_active_params
         if not self.model.config.tie_word_embeddings:
@@ -411,4 +415,5 @@ class ComposerHFCausalLM(HuggingFaceModelWithFSDP):
         attn_flops_per_seq = (self.model.config.num_hidden_layers * 2 * 2 *
                               (self.model.config.hidden_size * (msl**2)))
         _flops_per_batch = (params_flops_per_seq + attn_flops_per_seq) * 3 * bs
+        log.info("Flops per batch: %s", _flops_per_batch )
         return _flops_per_batch
