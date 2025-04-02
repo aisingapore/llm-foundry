@@ -539,7 +539,10 @@ def build_tokenizer(
         dist.barrier()
 
         if dist.get_local_rank() == 0:
-            os.remove(signal_file_path)
+            try:
+                os.remove(signal_file_path)
+            except:
+                pass
 
     return tokenizer
 
