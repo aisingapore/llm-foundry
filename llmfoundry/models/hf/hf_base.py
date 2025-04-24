@@ -128,6 +128,9 @@ class BaseHuggingFaceModel(HuggingFaceModel):
         # architecture changes are completed
         self.prepare_inner_model(self.model, init_device)
 
+        self.n_active_params = sum(p.numel() for p in self.parameters())
+
+
     def loss(self, outputs: ModelOutput, batch: Mapping):
         if self.config.use_return_dict:
             return outputs['loss']
@@ -297,6 +300,10 @@ class BaseHuggingFaceModel(HuggingFaceModel):
             config_overrides=config_overrides,
         )
 
+        # Hardcoded for Gemma3
+        if 'gemma-3' in pretrained_model_name_or_path and '1b' not in pretrained_model_name_or_path:
+            config = config.text_config 
+
         # We need to have all non-zero local ranks be not-pretrained
         # Rank 0 will still be pretrained, and distribute the weights appropriately
         if dist.get_local_rank() != 0 and init_device == 'mixed':
@@ -361,6 +368,8 @@ class BaseHuggingFaceModel(HuggingFaceModel):
             raise ValueError(
                 f'init_device="{init_device}" must be either "cpu" or "meta".',
             )
+
+        log.info(model)
 
         signal_file_path = dist.get_node_signal_file_name()
         if dist.get_local_rank() == 0:
@@ -481,3 +490,34 @@ class BaseHuggingFaceModel(HuggingFaceModel):
 
         # This provides support for meta initialization when using FSDP
         model.param_init_fn = lambda module: _custom_param_init_fn(module)
+
+
+    def flops_per_batch(self, batch: Mapping) -> int:
+        """
+        Calculates the number of floating-point operations (FLOPs) per batch.
+
+        Args:
+            batch (Mapping): The input batch containing 'input_ids' tensor.
+
+        Returns:
+            int: The total number of FLOPs per batch.
+
+        Note:
+            This computation does not take into account padding, and assumes that the dataset
+            has been constructed without padding. Additionally, it assumes that the backward
+            pass is approximately 2x the forward pass.
+        """
+        log.info("Flops per batch is called")
+
+        bs, msl = batch['input_ids'].shape[0:2]
+        params = self.n_active_params
+        if not self.model.config.tie_word_embeddings:
+            # embedding layers are lookup tables, therefore are not counted in the FLOP computation
+            params -= self.model.wte.weight.numel()
+        params_flops_per_token = 2 * params
+        params_flops_per_seq = params_flops_per_token * msl
+        attn_flops_per_seq = (self.model.config.num_hidden_layers * 2 * 2 *
+                                (self.model.config.hidden_size * (msl**2)))
+        _flops_per_batch = (params_flops_per_seq + attn_flops_per_seq) * 3 * bs
+        log.info("Flops per batch: %s", _flops_per_batch )
+        return _flops_per_batch
