@@ -175,7 +175,9 @@ def _log_num_params(model: ComposerModel, logged_cfg: dict[str, Any]):
         'n_active_params': n_active_params,
         'n_trainable_params': n_trainable_params,
     })
-
+    log.info(f"Number of parameters: {n_params:,}")
+    log.info(f"Number of active parameters: {n_active_params:,}") 
+    log.info(f"Number of trainable parameters: {n_trainable_params:,}")
 
 def _initialize_dist_with_barrier(dist_timeout: Union[int, float]):
     """Initialize distributed and test setup with a barrier.
