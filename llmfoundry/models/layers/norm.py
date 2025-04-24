@@ -136,7 +136,7 @@ class TritonRMSNorm(torch.nn.Module):
 
     def __init__(
         self,
-        normalized_shape: Union[int, List[int], torch.Size],
+        normalized_shape: Union[int, list[int], torch.Size],
         eps: float = 1e-5,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
