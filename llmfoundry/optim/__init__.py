@@ -14,6 +14,7 @@ from llmfoundry.optim.no_op import NoOp
 from llmfoundry.optim.scheduler import InverseSquareRootWithWarmupScheduler
 from llmfoundry.optim.adamw_schedulefree import AdamWScheduleFree, ScheduleFree
 from llmfoundry.registry import optimizers, schedulers
+from llmfoundry.optim.wsd_scheduler import WSDScheduler
 
 optimizers.register('adalr_lion', func=DecoupledAdaLRLion)
 optimizers.register('clip_lion', func=DecoupledClipLion)
@@ -31,6 +32,7 @@ schedulers.register(
     'inv_sqrt_with_warmup',
     func=InverseSquareRootWithWarmupScheduler,
 )
+schedulers.register('wsd_scheduler', func=WSDScheduler)
 
 __all__ = [
     'ScheduleFree',
