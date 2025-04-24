@@ -252,6 +252,21 @@ def train(cfg: DictConfig) -> Trainer:
         'torch.distributed.*_base is a private function and will be deprecated.*',
     )
 
+    # Setup Liger kernel
+    if cfg.get('variables', {}).get('liger', None):
+        liger_type = cfg.variables.liger
+        if liger_type == 'gemma3':
+            log.info('Applying liger kernel to gemma3')
+            try: # Hard code for Gemma3
+                from liger_kernel.transformers import apply_liger_kernel_to_gemma3_text
+                apply_liger_kernel_to_gemma3_text(fused_linear_cross_entropy=True)
+                log.info('Liger kernel applied to gemma3')
+            except ImportError:
+                raise ImportError('Liger kernel is not installed. Please install it using `pip install liger-kernel`')
+            except Exception as e:
+                log.error(f'Error applying liger kernel to gemma3: {e}')
+                raise e
+
     # Check for incompatibilities between the model and data loaders
     validate_config(train_cfg)
 
