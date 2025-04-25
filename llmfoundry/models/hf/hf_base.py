@@ -382,8 +382,8 @@ class BaseHuggingFaceModel(HuggingFaceModel):
             # Then, wait to ensure every node has finished downloading the checkpoint
             dist.barrier()
 
-        if dist.get_local_rank() == 0:
-            os.remove(signal_file_path)
+        # if dist.get_local_rank() == 0 and os.path.exists(signal_file_path):
+        #     os.remove(signal_file_path)
 
         # Use the pretrained generation config for the model if it exists.
         try:

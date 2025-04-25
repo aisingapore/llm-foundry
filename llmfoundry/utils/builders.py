@@ -538,8 +538,8 @@ def build_tokenizer(
 
         dist.barrier()
 
-        if dist.get_local_rank() == 0:
-            os.remove(signal_file_path)
+        # if dist.get_local_rank() == 0 and os.path.exists(signal_file_path):
+        #     os.remove(signal_file_path)
 
     return tokenizer
 

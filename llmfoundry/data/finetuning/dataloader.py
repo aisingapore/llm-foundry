@@ -627,9 +627,9 @@ def _download_remote_hf_dataset(remote_path: str, split: str) -> str:
             # Then, wait to ensure every node has finished trying to download the dataset
             dist.barrier()
 
-        # clean up signal file
-        if dist.get_local_rank() == 0:
-            os.remove(signal_file_path)
+        # # clean up signal file
+        # if dist.get_local_rank() == 0 and os.path.exists(signal_file_path):
+        #     os.remove(signal_file_path)
         dist.barrier()
         break
     return finetune_dir

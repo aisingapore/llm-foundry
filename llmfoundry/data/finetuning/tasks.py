@@ -1061,9 +1061,9 @@ class DatasetConstructor:
         # All ranks sync up at this barrier, having completed data processing
         dist.barrier()
 
-        # Last, local rank 0 cleans up the signal file
-        if dist.get_local_rank() == 0:
-            os.remove(signal_file_path)
+        # # Last, local rank 0 cleans up the signal file
+        # if dist.get_local_rank() == 0 and os.path.exists(signal_file_path):
+        #     os.remove(signal_file_path)
 
         if isinstance(error, hf_exceptions.DatasetGenerationError):
             log.error('Huggingface DatasetGenerationError during data prep.')
